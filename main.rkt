@@ -27,7 +27,8 @@
          rebellion/streaming/transducer
          rebellion/type/enum
          rebellion/type/record
-         rebellion/type/tuple)
+         rebellion/type/tuple
+         twixt/base)
 
 (module+ test
   (require (submod "..")
@@ -125,82 +126,6 @@
 (define (pict-grid . rows)
   (define (row->pict row) (apply hc-append (sequence->list row)))
   (apply vc-append (map row->pict (sequence->list rows))))
-
-;@------------------------------------------------------------------------------
-;; Twixt data model
-
-(define standard-twixt-board-size 24)
-(define standard-twixt-board-cell-count (sqr standard-twixt-board-size))
-(define standard-twixt-border-length (- standard-twixt-board-size 2))
-
-(define-enum-type twixt-player (red black))
-(define-record-type twixt-position (row column))
-(define-record-type twixt-peg (owner position))
-(define-record-type twixt-board (grid-cells links))
-
-(define (red-twixt-peg #:row row #:column column)
-  (twixt-peg #:owner red #:position (twixt-position #:row row #:column column)))
-
-(define (black-twixt-peg #:row row #:column column)
-  (twixt-peg #:owner black
-             #:position (twixt-position #:row row #:column column)))
-
-(define empty-twixt-board
-  (twixt-board
-   #:grid-cells (make-immutable-vector standard-twixt-board-cell-count #f)
-   #:links empty-hash))
-
-(define (twixt-cell-index->position index)
-  (define-values (row column)
-    (quotient/remainder index standard-twixt-board-size))
-  (twixt-position #:row row #:column column))
-
-(define (twixt-position->cell-index position)
-  (match-define (twixt-position #:row row #:column column) position)
-  (+ (* row standard-twixt-board-size) column))
-
-(module+ test
-  (test-case "twixt cell indices should be in bijection with twixt positions"
-    (for ([i (in-range standard-twixt-board-cell-count)])
-      (define position (twixt-cell-index->position i))
-      (check-equal? (twixt-position->cell-index position) i))))
-
-(define (twixt-board-get-peg board position)
-  (define cells (twixt-board-grid-cells board))
-  (define owner (vector-ref cells (twixt-position->cell-index position)))
-  (and owner
-       (present (twixt-peg #:owner owner #:position position))
-       absent))
-
-(define (twixt-board-occupied-at? board position)
-  (present? (twixt-board-get-peg board position)))
-
-(define (twixt-board-unoccupied-at? board position)
-  (absent? (twixt-board-get-peg board position)))
-
-(define (vector-copy-of vec)
-  (define copy (make-vector (vector-length vec)))
-  (vector-copy! copy 0 vec)
-  copy)
-
-(define (twixt-board-put-peg board . pegs)
-  (define new-cells (vector-copy-of (twixt-board-grid-cells board)))
-  (for ([peg (in-list pegs)])
-    (match-define (twixt-peg #:owner owner #:position position) peg)
-    (vector-set! new-cells (twixt-position->cell-index position) owner))
-  (twixt-board #:grid-cells new-cells #:links (twixt-board-links board)))
-
-(define (twixt-board-pegs board)
-  (transduce (twixt-board-grid-cells board)
-             enumerating
-             (bisecting enumerated-position enumerated-element)
-             (filtering-values (negate false?))
-             (mapping-keys twixt-cell-index->position)
-             (mapping
-              (λ (e)
-                (match-define (entry position owner) e)
-                (twixt-peg #:owner owner #:position position)))
-             #:into into-set))
 
 ;@------------------------------------------------------------------------------
 ;; Twixt graphics
