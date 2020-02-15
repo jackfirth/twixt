@@ -12,16 +12,26 @@
   [monochrome-twixt-stylesheet twixt-stylesheet?]))
 
 (require pict
+         racket/bool
+         racket/function
          racket/list
          racket/match
          racket/math
+         racket/sequence
+         rebellion/base/option
+         rebellion/collection/entry
          rebellion/collection/immutable-vector
          rebellion/collection/hash
+         rebellion/collection/set
          rebellion/streaming/reducer
          rebellion/streaming/transducer
          rebellion/type/enum
          rebellion/type/record
          rebellion/type/tuple)
+
+(module+ test
+  (require (submod "..")
+           rackunit))
 
 ;@------------------------------------------------------------------------------
 ;; Pict stuff
@@ -113,8 +123,8 @@
   (pict-pin pict border #:base-position position #:pinned-position position))
 
 (define (pict-grid . rows)
-  (define (row->pict row) (apply hc-append row))
-  (apply vc-append (map row->pict rows)))
+  (define (row->pict row) (apply hc-append (sequence->list row)))
+  (apply vc-append (map row->pict (sequence->list rows))))
 
 ;@------------------------------------------------------------------------------
 ;; Twixt data model
@@ -123,9 +133,17 @@
 (define standard-twixt-board-cell-count (sqr standard-twixt-board-size))
 (define standard-twixt-border-length (- standard-twixt-board-size 2))
 
-(define-record-type twixt-position (row column))
 (define-enum-type twixt-player (red black))
+(define-record-type twixt-position (row column))
+(define-record-type twixt-peg (owner position))
 (define-record-type twixt-board (grid-cells links))
+
+(define (red-twixt-peg #:row row #:column column)
+  (twixt-peg #:owner red #:position (twixt-position #:row row #:column column)))
+
+(define (black-twixt-peg #:row row #:column column)
+  (twixt-peg #:owner black
+             #:position (twixt-position #:row row #:column column)))
 
 (define empty-twixt-board
   (twixt-board
@@ -137,6 +155,53 @@
     (quotient/remainder index standard-twixt-board-size))
   (twixt-position #:row row #:column column))
 
+(define (twixt-position->cell-index position)
+  (match-define (twixt-position #:row row #:column column) position)
+  (+ (* row standard-twixt-board-size) column))
+
+(module+ test
+  (test-case "twixt cell indices should be in bijection with twixt positions"
+    (for ([i (in-range standard-twixt-board-cell-count)])
+      (define position (twixt-cell-index->position i))
+      (check-equal? (twixt-position->cell-index position) i))))
+
+(define (twixt-board-get-peg board position)
+  (define cells (twixt-board-grid-cells board))
+  (define owner (vector-ref cells (twixt-position->cell-index position)))
+  (and owner
+       (present (twixt-peg #:owner owner #:position position))
+       absent))
+
+(define (twixt-board-occupied-at? board position)
+  (present? (twixt-board-get-peg board position)))
+
+(define (twixt-board-unoccupied-at? board position)
+  (absent? (twixt-board-get-peg board position)))
+
+(define (vector-copy-of vec)
+  (define copy (make-vector (vector-length vec)))
+  (vector-copy! copy 0 vec)
+  copy)
+
+(define (twixt-board-put-peg board . pegs)
+  (define new-cells (vector-copy-of (twixt-board-grid-cells board)))
+  (for ([peg (in-list pegs)])
+    (match-define (twixt-peg #:owner owner #:position position) peg)
+    (vector-set! new-cells (twixt-position->cell-index position) owner))
+  (twixt-board #:grid-cells new-cells #:links (twixt-board-links board)))
+
+(define (twixt-board-pegs board)
+  (transduce (twixt-board-grid-cells board)
+             enumerating
+             (bisecting enumerated-position enumerated-element)
+             (filtering-values (negate false?))
+             (mapping-keys twixt-cell-index->position)
+             (mapping
+              (λ (e)
+                (match-define (entry position owner) e)
+                (twixt-peg #:owner owner #:position position)))
+             #:into into-set))
+
 ;@------------------------------------------------------------------------------
 ;; Twixt graphics
 
@@ -146,8 +211,16 @@
    hole-diameter
    hole-color
    border-thickness
+   peg-diameter
+   line-thickness
    vertical-player-color
-   horizontal-player-color))
+   horizontal-player-color
+   vertical-player))
+
+(define (twixt-stylesheet-player-color styles player)
+  (if (equal? (twixt-stylesheet-vertical-player styles) player)
+      (twixt-stylesheet-vertical-player-color styles)
+      (twixt-stylesheet-horizontal-player-color styles)))
 
 (define standard-twixt-stylesheet
   (twixt-stylesheet
@@ -156,6 +229,9 @@
    #:hole-diameter 4
    #:hole-color "Burlywood"
    #:border-thickness 4
+   #:peg-diameter 16
+   #:line-thickness 4
+   #:vertical-player red
    #:vertical-player-color "Red"
    #:horizontal-player-color "Black"))
 
@@ -166,6 +242,9 @@
    #:hole-diameter 4
    #:hole-color "Dark Gray"
    #:border-thickness 4
+   #:peg-diameter 16
+   #:line-thickness 4
+   #:vertical-player red
    #:vertical-player-color "White"
    #:horizontal-player-color "Black"))
 
@@ -218,29 +297,31 @@
    (list left-column center-cells right-column)
    (list corner bottom-row corner)))
 
-(define (twixt-peg-pict owner) #f)
-
 (define (twixt-board-pict board #:stylesheet [styles standard-twixt-stylesheet])
-  (match-define (twixt-board #:grid-cells cells #:links links) board)
-  (define pict-with-pegs
-    (transduce cells
-               enumerating
-               (filtering (λ (e) (twixt-player? (enumerated-element e))))
-               (mapping enumerated-peg->pict)
-               #:into (pin-into-pict (empty-twixt-board-pict styles))))
-  (transduce links
-             (mapping link-entry->pict)
-             #:into (pin-into-pict pict-with-pegs)))
+  (transduce (twixt-board-pegs board)
+             (mapping (λ (peg) (twixt-peg-pict peg #:stylesheet styles)))
+             #:into (pin-into-pict (empty-twixt-board-pict styles))))
 
-(define (enumerated-peg->pict peg)
-  (define index (enumerated-position peg))
-  (define owner (enumerated-element peg))
-  (pinned-pict #:content (twixt-peg-pict owner)
-               #:position (twixt-cell-index->position index)))
-
-(define (link-entry->pict ent)
-   #f)
+(define (twixt-peg-pict peg
+                        #:stylesheet [styles standard-twixt-stylesheet])
+  (match-define
+    (twixt-peg #:owner owner
+               #:position (twixt-position #:row row #:column column))
+    peg)
+  (define diameter (twixt-stylesheet-peg-diameter styles))
+  (define color (twixt-stylesheet-player-color styles owner))
+  (define width (twixt-stylesheet-line-thickness styles))
+  (define peg-pict (circle diameter #:border-color color #:border-width width))
+  (define relative-x (/ (+ column 1/2) 24))
+  (define relative-y (/ (+ row 1/2) 24))
+  (pinned-pict #:content peg-pict
+               #:base-position (relative-position relative-x relative-y)
+               #:pinned-position center))
 
 (module+ main
-  (empty-twixt-board-pict standard-twixt-stylesheet)
-  (empty-twixt-board-pict monochrome-twixt-stylesheet))
+  (twixt-board-pict
+   (twixt-board-put-peg empty-twixt-board
+                        (red-twixt-peg #:row 1 #:column 1)
+                        (black-twixt-peg #:row 1 #:column 22)
+                        (red-twixt-peg #:row 22 #:column 1)
+                        (black-twixt-peg #:row 22 #:column 22))))
