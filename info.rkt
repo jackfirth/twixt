@@ -9,7 +9,9 @@
               "twixt")))
 
 (define deps
-  (list "base"))
+  (list "pict-lib"
+        "rebellion"
+        "base"))
 
 (define build-deps
   (list "racket-doc"
