@@ -4,7 +4,7 @@
 
 (define scribblings
   (list (list "main.scrbl"
-              (list 'multi-page)
+              (list)
               (list 'library)
               "twixt")))
 
@@ -14,6 +14,7 @@
         "base"))
 
 (define build-deps
-  (list "racket-doc"
+  (list "pict-doc"
+        "racket-doc"
         "rackunit-lib"
         "scribble-lib"))

@@ -119,19 +119,23 @@
 ;@------------------------------------------------------------------------------
 ;; Twixt data model
 
-(define standard-twixt-board-side-length 24)
-(define standard-twixt-board-size (sqr standard-twixt-board-side-length))
-(define standard-twixt-border-length (- standard-twixt-board-side-length 2))
+(define standard-twixt-board-size 24)
+(define standard-twixt-board-cell-count (sqr standard-twixt-board-size))
+(define standard-twixt-border-length (- standard-twixt-board-size 2))
 
+(define-record-type twixt-position (row column))
 (define-enum-type twixt-player (red black))
 (define-record-type twixt-board (grid-cells links))
 
 (define empty-twixt-board
   (twixt-board
-   #:grid-cells (make-immutable-vector standard-twixt-board-size #f)
+   #:grid-cells (make-immutable-vector standard-twixt-board-cell-count #f)
    #:links empty-hash))
 
-(define (twixt-cell-index->position index) #f)
+(define (twixt-cell-index->position index)
+  (define-values (row column)
+    (quotient/remainder index standard-twixt-board-size))
+  (twixt-position #:row row #:column column))
 
 ;@------------------------------------------------------------------------------
 ;; Twixt graphics
@@ -164,13 +168,6 @@
    #:border-thickness 4
    #:vertical-player-color "White"
    #:horizontal-player-color "Black"))
-
-(define twixt-border-thickness 4)
-
-(define (twixt-player-color player)
-  (match player
-    [(== red) "red"]
-    [(== black) "black"]))
 
 (define (twixt-blank-cell-pict styles)
   (match-define (twixt-stylesheet #:cell-size size #:cell-color color) styles)
