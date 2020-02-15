@@ -1,5 +1,15 @@
 #lang racket/base
 
+(require racket/contract/base)
+
+(provide
+ (contract-out
+  [twixt-board? predicate/c]
+  [empty-twixt-board twixt-board?]
+  [twixt-board-pict (->* (twixt-board?) (#:stylesheet twixt-stylesheet?) pict?)]
+  [twixt-stylesheet? predicate/c]
+  [standard-twixt-stylesheet twixt-stylesheet?]))
+
 (require pict
          racket/list
          racket/match
