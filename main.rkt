@@ -8,7 +8,8 @@
   [empty-twixt-board twixt-board?]
   [twixt-board-pict (->* (twixt-board?) (#:stylesheet twixt-stylesheet?) pict?)]
   [twixt-stylesheet? predicate/c]
-  [standard-twixt-stylesheet twixt-stylesheet?]))
+  [standard-twixt-stylesheet twixt-stylesheet?]
+  [monochrome-twixt-stylesheet twixt-stylesheet?]))
 
 (require pict
          racket/list
@@ -154,6 +155,16 @@
    #:vertical-player-color "Red"
    #:horizontal-player-color "Black"))
 
+(define monochrome-twixt-stylesheet
+  (twixt-stylesheet
+   #:cell-size 24
+   #:cell-color "Light Gray"
+   #:hole-diameter 4
+   #:hole-color "Dark Gray"
+   #:border-thickness 4
+   #:vertical-player-color "White"
+   #:horizontal-player-color "Black"))
+
 (define twixt-border-thickness 4)
 
 (define (twixt-player-color player)
@@ -234,4 +245,5 @@
    #f)
 
 (module+ main
-  (empty-twixt-board-pict standard-twixt-stylesheet))
+  (empty-twixt-board-pict standard-twixt-stylesheet)
+  (empty-twixt-board-pict monochrome-twixt-stylesheet))
