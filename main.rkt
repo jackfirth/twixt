@@ -223,30 +223,50 @@
    (list corner bottom-row corner)))
 
 (define (twixt-board-pict board #:stylesheet [styles standard-twixt-stylesheet])
-  (transduce (twixt-board-pegs board)
-             (mapping (λ (peg) (twixt-peg-pict peg #:stylesheet styles)))
-             #:into (pin-into-pict (empty-twixt-board-pict styles))))
+  (define board-with-pegs-pict
+    (transduce (twixt-board-pegs board)
+               (mapping (λ (peg) (twixt-peg-pict peg #:stylesheet styles)))
+               #:into (pin-into-pict (empty-twixt-board-pict styles))))
+  (transduce (twixt-board-links board)
+             (mapping (λ (link) (twixt-link-pict link #:stylesheet styles)))
+             #:into (pin-into-pict board-with-pegs-pict)))
 
-(define (twixt-peg-pict peg
-                        #:stylesheet [styles standard-twixt-stylesheet])
+(define (twixt-board-relative-position position)
+  (match-define (twixt-position #:row row #:column column) position)
+  (relative-position (/ (+ column 1/2) standard-twixt-board-size)
+                     (/ (+ row 1/2) standard-twixt-board-size)))
+
+(define (twixt-peg-pict peg #:stylesheet [styles standard-twixt-stylesheet])
   (match-define
     (twixt-peg #:owner owner
-               #:position (twixt-position #:row row #:column column))
+               #:position position)
     peg)
   (define diameter (twixt-stylesheet-peg-diameter styles))
   (define color (twixt-stylesheet-player-color styles owner))
   (define width (twixt-stylesheet-line-thickness styles))
   (define peg-pict (circle diameter #:border-color color #:border-width width))
-  (define relative-x (/ (+ column 1/2) standard-twixt-board-size))
-  (define relative-y (/ (+ row 1/2) standard-twixt-board-size))
+  
   (pinned-pict #:content peg-pict
-               #:base-position (relative-position relative-x relative-y)
+               #:base-position (twixt-board-relative-position position)
+               #:pinned-position center))
+
+(define (twixt-link-pict link #:stylesheet [styles standard-twixt-stylesheet])
+  (match-define
+    (placed-twixt-link
+     #:owner owner
+     #:left-end start
+     #:right-end end)
+    link)
+  (define relative-start (twixt-board-relative-position start))
+  (define relative-end (twixt-board-relative-position end))
+  (pinned-pict #:content (blank)
+               #:base-position center
                #:pinned-position center))
 
 (module+ main
   (twixt-board-pict
    (twixt-board-put-peg empty-twixt-board
-                        (red-twixt-peg #:row 1 #:column 1)
+                        (red-twixt-peg #:row 11 #:column 12)
                         (black-twixt-peg #:row 1 #:column 22)
-                        (red-twixt-peg #:row 22 #:column 1)
+                        (red-twixt-peg #:row 13 #:column 11 up-left-link)
                         (black-twixt-peg #:row 22 #:column 22))))
