@@ -237,8 +237,8 @@
   (define color (twixt-stylesheet-player-color styles owner))
   (define width (twixt-stylesheet-line-thickness styles))
   (define peg-pict (circle diameter #:border-color color #:border-width width))
-  (define relative-x (/ (+ column 1/2) 24))
-  (define relative-y (/ (+ row 1/2) 24))
+  (define relative-x (/ (+ column 1/2) standard-twixt-board-size))
+  (define relative-y (/ (+ row 1/2) standard-twixt-board-size))
   (pinned-pict #:content peg-pict
                #:base-position (relative-position relative-x relative-y)
                #:pinned-position center))
