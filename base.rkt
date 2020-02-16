@@ -16,11 +16,23 @@
   [twixt-player? predicate/c]
   [red twixt-player?]
   [black twixt-player?]
+  [twixt-link? predicate/c]
+  [up-left-link twixt-link?]
+  [up-right-link twixt-link?]
+  [right-up-link twixt-link?]
+  [right-down-link twixt-link?]
+  [down-right-link twixt-link?]
+  [down-left-link twixt-link?]
+  [left-down-link twixt-link?]
+  [left-up-link twixt-link?]
   [twixt-peg? predicate/c]
   [twixt-peg-owner (-> twixt-peg? twixt-player?)]
   [twixt-peg-position (-> twixt-peg? twixt-position?)]
-  [red-twixt-peg (-> #:row twixt-index/c #:column twixt-index/c twixt-peg?)]
-  [black-twixt-peg (-> #:row twixt-index/c #:column twixt-index/c twixt-peg?)]
+  [twixt-peg-links (-> twixt-peg? (set/c twixt-link?))]
+  [red-twixt-peg
+   (-> #:row twixt-index/c #:column twixt-index/c twixt-link? ... twixt-peg?)]
+  [black-twixt-peg
+   (-> #:row twixt-index/c #:column twixt-index/c twixt-link? ... twixt-peg?)]
   [twixt-board? predicate/c]
   [empty-twixt-board twixt-board?]
   [twixt-board-get-peg (-> twixt-board? twixt-position? (option/c twixt-peg?))]
@@ -47,6 +59,7 @@
          racket/function
          racket/match
          racket/math
+         racket/sequence
          racket/set
          rebellion/base/option
          rebellion/collection/entry
@@ -65,18 +78,26 @@
            rackunit))
 
 ;@------------------------------------------------------------------------------
-;; Twixt data model
+;; Twixt links and positions
 
 (define standard-twixt-board-size 24)
-(define standard-twixt-board-cell-count (sqr standard-twixt-board-size))
+(define standard-twixt-cell-count (sqr standard-twixt-board-size))
 (define standard-twixt-border-length (- standard-twixt-board-size 2))
 
 (define twixt-index/c (integer-in 0 (sub1 standard-twixt-board-size)))
 
+(define-enum-type twixt-link
+  (up-left-link
+   up-right-link
+   right-up-link
+   right-down-link
+   down-right-link
+   down-left-link
+   left-down-link
+   left-up-link))
+
 (define-enum-type twixt-player (red black))
 (define-record-type twixt-position (row column) #:omit-root-binding)
-(define-record-type twixt-peg (owner position) #:omit-root-binding)
-(define-record-type twixt-board (grid-cells links))
 
 (define-module-boundary-contract contracted:twixt-position
   constructor:twixt-position
@@ -87,73 +108,32 @@
   (syntax-parser [(_ arg ...) #'(pattern:twixt-position arg ...)])
   (make-rename-transformer #'contracted:twixt-position))
 
-(define-module-boundary-contract contracted:twixt-peg
-  constructor:twixt-peg
-  (-> #:owner twixt-player? #:position twixt-position? twixt-peg?)
-  #:name-for-blame twixt-peg)
+(define (twixt-link-inverse link)
+  (match link
+    [(== up-left-link) down-right-link]
+    [(== up-right-link) down-left-link]
+    [(== right-up-link) left-down-link]
+    [(== right-down-link) left-up-link]
+    [(== down-right-link) up-left-link]
+    [(== down-left-link) up-right-link]
+    [(== left-down-link) right-up-link]
+    [(== left-up-link) right-down-link]))
 
-(define-match-expander twixt-peg
-  (syntax-parser [(_ arg ...) #'(pattern:twixt-peg arg ...)])
-  (make-rename-transformer #'contracted:twixt-peg))
-
-(define (red-twixt-peg #:row row #:column column)
-  (twixt-peg #:owner red #:position (twixt-position #:row row #:column column)))
-
-(define (black-twixt-peg #:row row #:column column)
-  (twixt-peg #:owner black
-             #:position (twixt-position #:row row #:column column)))
-
-(define empty-twixt-board
-  (twixt-board
-   #:grid-cells (make-immutable-vector standard-twixt-board-cell-count #f)
-   #:links empty-hash))
-
-(define (twixt-cell-index->position index)
-  (define-values (row column)
-    (quotient/remainder index standard-twixt-board-size))
-  (twixt-position #:row row #:column column))
-
-(define (twixt-position->cell-index position)
-  (match-define (twixt-position #:row row #:column column) position)
-  (+ (* row standard-twixt-board-size) column))
-
-(module+ test
-  (test-case "twixt cell indices should be in bijection with twixt positions"
-    (for ([i (in-range standard-twixt-board-cell-count)])
-      (define position (twixt-cell-index->position i))
-      (check-equal? (twixt-position->cell-index position) i))))
-
-(define (twixt-board-get-peg board position)
-  (define cells (twixt-board-grid-cells board))
-  (define owner (vector-ref cells (twixt-position->cell-index position)))
-  (if owner
-      (present (twixt-peg #:owner owner #:position position))
-      absent))
-
-(define (twixt-board-occupied-at? board position)
-  (present? (twixt-board-get-peg board position)))
-
-(define (twixt-board-unoccupied-at? board position)
-  (absent? (twixt-board-get-peg board position)))
-
-(define (twixt-board-put-peg board . pegs)
-  (define new-cells (vector-copy-of (twixt-board-grid-cells board)))
-  (for ([peg (in-list pegs)])
-    (match-define (twixt-peg #:owner owner #:position position) peg)
-    (vector-set! new-cells (twixt-position->cell-index position) owner))
-  (twixt-board #:grid-cells new-cells #:links (twixt-board-links board)))
-
-(define (twixt-board-pegs board)
-  (transduce (twixt-board-grid-cells board)
-             enumerating
-             (bisecting enumerated-position enumerated-element)
-             (filtering-values (negate false?))
-             (mapping-keys twixt-cell-index->position)
-             (mapping
-              (λ (e)
-                (match-define (entry position owner) e)
-                (twixt-peg #:owner owner #:position position)))
-             #:into into-set))
+(define (twixt-link-destination link source-position)
+  (match-define (twixt-position #:row r #:column c) source-position)
+  (define r*
+    (match link
+      [(or (== up-left-link) (== up-right-link)) (- r 2)]
+      [(or (== left-up-link) (== right-up-link)) (- r 1)]
+      [(or (== left-down-link) (== right-down-link)) (+ r 1)]
+      [(or (== down-left-link) (== down-right-link)) (+ r 2)]))
+  (define c*
+    (match link
+      [(or (== left-down-link) (== left-up-link)) (- c 2)]
+      [(or (== up-left-link) (== down-left-link)) (- c 1)]
+      [(or (== up-right-link) (== down-right-link)) (+ c 1)]
+      [(or (== right-up-link) (== right-down-link)) (+ c 2)]))
+  (twixt-position #:row r* #:column c*))
 
 (module+ test
   (test-case "twixt-position"
@@ -167,7 +147,137 @@
                (λ () (twixt-position #:row 24 #:column 0)))
     (check-exn exn:fail:contract:blame?
                (λ () (twixt-position #:row 0 #:column 24))))
+
+  (test-case "twixt-link-inverse"
+    (check-equal? (twixt-link-inverse up-left-link) down-right-link)
+    (check-equal? (twixt-link-inverse right-down-link) left-up-link))
   
+  (test-case "twixt-link-destination"
+    (define source (twixt-position #:row 5 #:column 10))
+    (check-equal? (twixt-link-destination up-left-link source)
+                  (twixt-position #:row 3 #:column 9))
+    (check-equal? (twixt-link-destination up-right-link source)
+                  (twixt-position #:row 3 #:column 11))
+    (check-equal? (twixt-link-destination right-up-link source)
+                  (twixt-position #:row 4 #:column 12))
+    (check-equal? (twixt-link-destination right-down-link source)
+                  (twixt-position #:row 6 #:column 12))
+    (check-equal? (twixt-link-destination down-right-link source)
+                  (twixt-position #:row 7 #:column 11))
+    (check-equal? (twixt-link-destination down-left-link source)
+                  (twixt-position #:row 7 #:column 9))
+    (check-equal? (twixt-link-destination left-down-link source)
+                  (twixt-position #:row 6 #:column 8))
+    (check-equal? (twixt-link-destination left-up-link source)
+                  (twixt-position #:row 4 #:column 8))))
+
+;@------------------------------------------------------------------------------
+;; Twixt pegs
+
+(define-record-type twixt-peg (owner position links) #:omit-root-binding)
+
+(define (smart-constructor:twixt-peg #:owner owner
+                                     #:position position
+                                     #:links [links empty-set])
+  (constructor:twixt-peg #:owner owner
+                         #:position position
+                         #:links (transduce links #:into into-set)))
+
+(define-module-boundary-contract contracted:twixt-peg
+  smart-constructor:twixt-peg
+  (->* (#:owner twixt-player? #:position twixt-position?)
+       (#:links (sequence/c twixt-link?))
+       twixt-peg?)
+  #:name-for-blame twixt-peg)
+
+(define-match-expander twixt-peg
+  (syntax-parser [(_ arg ...) #'(pattern:twixt-peg arg ...)])
+  (make-rename-transformer #'contracted:twixt-peg))
+
+(define (red-twixt-peg #:row row #:column column . links)
+  (define position (twixt-position #:row row #:column column))
+  (twixt-peg #:owner red #:position position #:links links))
+
+(define (black-twixt-peg #:row row #:column column . links)
+  (define position (twixt-position #:row row #:column column))
+  (twixt-peg #:owner black #:position position #:links links))
+
+
+(define (twixt-cell-index->position index)
+  (define-values (row column)
+    (quotient/remainder index standard-twixt-board-size))
+  (twixt-position #:row row #:column column))
+
+(define (twixt-position->cell-index position)
+  (match-define (twixt-position #:row row #:column column) position)
+  (+ (* row standard-twixt-board-size) column))
+
+(module+ test
+  (test-case "twixt cell indices should be in bijection with twixt positions"
+    (for ([i (in-range standard-twixt-cell-count)])
+      (define position (twixt-cell-index->position i))
+      (check-equal? (twixt-position->cell-index position) i))))
+
+;@------------------------------------------------------------------------------
+;; Twixt boards
+
+(define-record-type twixt-board (cell-owners cell-links))
+
+(define empty-twixt-board
+  (twixt-board
+   #:cell-owners (make-immutable-vector standard-twixt-cell-count #f)
+   #:cell-links (make-immutable-vector standard-twixt-cell-count empty-set)))
+
+(define (twixt-board-get-peg board position)
+  (define cell-owners (twixt-board-cell-owners board))
+  (define cell-links (twixt-board-cell-links board))
+  (define index (twixt-position->cell-index position))
+  (define owner (vector-ref cell-owners index))
+  (define links (vector-ref cell-links index))
+  (cond
+    [(not owner) absent]
+    [else
+     (define peg (twixt-peg #:owner owner #:position position #:links links))
+     (present peg)]))
+
+(define (twixt-board-occupied-positions board)
+  (transduce (twixt-board-cell-owners board)
+             enumerating
+             (filtering (λ (e) (not (false? (enumerated-element e)))))
+             (mapping enumerated-position)
+             (mapping twixt-cell-index->position)
+             #:into into-set))
+
+(define (twixt-board-occupied-at? board position)
+  (present? (twixt-board-get-peg board position)))
+
+(define (twixt-board-unoccupied-at? board position)
+  (absent? (twixt-board-get-peg board position)))
+
+(define (twixt-board-put-peg board . pegs)
+  (define new-owners (vector-copy-of (twixt-board-cell-owners board)))
+  (define new-links (vector-copy-of (twixt-board-cell-links board)))
+  (for ([peg (in-list pegs)])
+    (match-define (twixt-peg #:owner owner #:position position #:links links)
+      peg)
+    (define index (twixt-position->cell-index position))
+    (vector-set! new-owners index owner)
+    (vector-set! new-links index links)
+    (for ([link (in-set links)])
+      (define linked-index
+        (twixt-position->cell-index (twixt-link-destination link position)))
+      (define new-destination-links
+        (set-add (vector-ref new-links linked-index) (twixt-link-inverse link)))
+      (vector-set! new-links linked-index new-destination-links)))
+  (twixt-board #:cell-owners (vector->immutable-vector new-owners)
+               #:cell-links (vector->immutable-vector new-links)))
+
+(define (twixt-board-pegs board)
+  (transduce (twixt-board-occupied-positions board)
+             (mapping (λ (p) (present-value (twixt-board-get-peg board p))))
+             #:into into-set))
+
+(module+ test
   (test-case "twixt-board-occupied-at?"
     (define position (twixt-position #:row 3 #:column 18))
     (check-false (twixt-board-occupied-at? empty-twixt-board position)))
@@ -185,7 +295,19 @@
     (test-case "occupied"
       (define peg (twixt-peg #:owner black #:position position))
       (define board (twixt-board-put-peg empty-twixt-board peg))
-      (check-equal? (twixt-board-get-peg board position) (present peg))))
+      (check-equal? (twixt-board-get-peg board position) (present peg)))
+
+    (test-case "links"
+      (define first-peg (red-twixt-peg #:row 10 #:column 10))
+      (define second-peg (red-twixt-peg #:row 12 #:column 11 up-left-link))
+      (define board
+        (twixt-board-put-peg empty-twixt-board first-peg second-peg))
+      (check-equal?
+       (twixt-board-get-peg board (twixt-position #:row 10 #:column 10))
+       (present (red-twixt-peg #:row 10 #:column 10 down-right-link)))
+      (check-equal?
+       (twixt-board-get-peg board (twixt-position #:row 12 #:column 11))
+       (present (red-twixt-peg #:row 12 #:column 11 up-left-link)))))
     
   (test-case "twixt-board-put-peg"
 
