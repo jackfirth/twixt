@@ -55,6 +55,17 @@
         #:pre/name (pegs) "peg positions must be unique"
         (list-elements-unique? (map twixt-peg-position pegs))
 
+        #:pre/name (board pegs) "links must have pegs at both ends"
+        (block
+         (define peg-positions
+           (transduce pegs (mapping twixt-peg-position) #:into into-set))
+         (define occupied
+           (set-union (twixt-board-occupied-positions board) peg-positions))
+         (for*/and ([peg (in-list pegs)]
+                    [link (in-set (twixt-peg-placed-links peg))])
+           (and (set-member? occupied (placed-twixt-link-left-end link))
+                (set-member? occupied (placed-twixt-link-right-end link)))))
+
         [_ twixt-board?])]
 
   [twixt-board-occupied-positions (-> twixt-board? (set/c twixt-position?))]
@@ -63,6 +74,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
+         racket/block
          racket/bool
          racket/function
          racket/match
@@ -399,7 +411,32 @@
       (check-exn #rx"7" put-both)
       (check-exn #rx"21" put-both)
       (check-exn #rx"red" put-both)
-      (check-exn #rx"black" put-both)))
+      (check-exn #rx"black" put-both))
+
+    (test-case "should fail when given links without pegs"
+      (define (put-mislinked)
+        (twixt-board-put-peg empty-twixt-board
+                             (red-twixt-peg #:row 10 #:column 10 up-left-link)))
+      (check-exn exn:fail:contract:blame? put-mislinked)
+      (check-exn #rx"twixt-board-put-peg" put-mislinked)
+      (check-exn #rx"links must have pegs at both ends" put-mislinked)
+      (check-exn #rx"up-left-link" put-mislinked))
+
+    (test-case "should allow links between simultaneously-added pegs"
+      (define ((make-put-call . pegs))
+        (apply twixt-board-put-peg empty-twixt-board pegs))
+      (check-not-exn
+       (make-put-call
+        (red-twixt-peg #:row 10 #:column 10 up-left-link)
+        (red-twixt-peg #:row 8 #:column 9)))
+      (check-not-exn
+       (make-put-call
+        (red-twixt-peg #:row 10 #:column 10)
+        (red-twixt-peg #:row 8 #:column 9 down-right-link)))
+      (check-not-exn
+       (make-put-call
+        (red-twixt-peg #:row 10 #:column 10 up-left-link)
+        (red-twixt-peg #:row 8 #:column 9 down-right-link)))))
 
   (test-case "twixt board peg and link collections"
     (define board
