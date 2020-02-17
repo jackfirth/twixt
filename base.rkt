@@ -322,7 +322,8 @@
       peg)
     (define index (twixt-position->cell-index position))
     (vector-set! new-owners index owner)
-    (vector-set! new-links index links)
+    (define previous-links (vector-ref new-links index))
+    (vector-set! new-links index (set-union previous-links links))
     (for ([link (in-set links)])
       (define linked-index
         (twixt-position->cell-index (twixt-link-destination link position)))
