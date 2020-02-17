@@ -65,6 +65,8 @@
 
 (define-record-type pinned-pict (content pinned-position base-position))
 
+(define-record-type pinned-line (source destination color thickness))
+
 (define (pict-pin base pinned
                   #:base-position base-position
                   #:pinned-position pinned-position)
@@ -79,15 +81,35 @@
   (match-define (point dx dy) (point- base-point pinned-point))
   (panorama (pin-over base dx dy pinned)))
 
-(define (pict-pin-pinned base pinned)
+(define (pict-pin-line pict line)
   (match-define
-    (pinned-pict #:content content
-                 #:base-position base-position
-                 #:pinned-position pinned-position)
-    pinned)
-  (pict-pin base content
-            #:base-position base-position
-            #:pinned-position pinned-position))
+    (pinned-line #:source relative-source
+                 #:destination relative-destination
+                 #:color color
+                 #:thickness thickness)
+    line)
+  (define source
+    (if (relative-position? relative-source)
+        (pict-relative-point pict relative-source)
+        relative-source))
+  (define destination
+    (if (relative-position? relative-destination)
+        (pict-relative-point pict relative-destination)
+        relative-destination))
+  (match-define (point dx dy) (point- destination source))
+  (define line-pict (linewidth thickness (colorize (pip-line dx dy 0) color)))
+  (pin-over pict (point-x source) (point-y source) line-pict))
+
+(define (pict-pin-pinned base pinned)
+  (match pinned
+    [(pinned-pict #:content content
+                  #:base-position base-position
+                  #:pinned-position pinned-position)
+     (pict-pin base content
+               #:base-position base-position
+               #:pinned-position pinned-position)]
+    [(? pinned-line?)
+     (pict-pin-line base pinned)]))
 
 (define (pin-into-pict base) (make-fold-reducer pict-pin-pinned base))
 
@@ -245,7 +267,6 @@
   (define color (twixt-stylesheet-player-color styles owner))
   (define width (twixt-stylesheet-line-thickness styles))
   (define peg-pict (circle diameter #:border-color color #:border-width width))
-  
   (pinned-pict #:content peg-pict
                #:base-position (twixt-board-relative-position position)
                #:pinned-position center))
@@ -257,16 +278,15 @@
      #:left-end start
      #:right-end end)
     link)
-  (define relative-start (twixt-board-relative-position start))
-  (define relative-end (twixt-board-relative-position end))
-  (pinned-pict #:content (blank)
-               #:base-position center
-               #:pinned-position center))
+  (pinned-line #:source (twixt-board-relative-position start)
+               #:destination (twixt-board-relative-position end)
+               #:color (twixt-stylesheet-player-color styles owner)
+               #:thickness (twixt-stylesheet-line-thickness styles)))
 
 (module+ main
   (twixt-board-pict
    (twixt-board-put-peg empty-twixt-board
                         (red-twixt-peg #:row 11 #:column 12)
                         (black-twixt-peg #:row 1 #:column 22)
-                        (red-twixt-peg #:row 13 #:column 11 up-left-link)
+                        (red-twixt-peg #:row 13 #:column 11 up-right-link)
                         (black-twixt-peg #:row 22 #:column 22))))
