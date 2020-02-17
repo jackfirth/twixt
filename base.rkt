@@ -57,6 +57,7 @@
 
         [_ twixt-board?])]
 
+  [twixt-board-occupied-positions (-> twixt-board? (set/c twixt-position?))]
   [twixt-board-pegs (-> twixt-board? (set/c twixt-peg?))]
   [twixt-board-links (-> twixt-board? (set/c placed-twixt-link?))]))
 
