@@ -35,6 +35,12 @@
            rackunit))
 
 ;@------------------------------------------------------------------------------
+;; Data model stuff that shouldn't be allowed bypass twixt/base contracts
+
+(define (twixt-board . pegs)
+  (apply twixt-board-put-peg empty-twixt-board pegs))
+
+;@------------------------------------------------------------------------------
 ;; Pict stuff
 
 (define-tuple-type point (x y))
@@ -285,8 +291,8 @@
 
 (module+ main
   (twixt-board-pict
-   (twixt-board-put-peg empty-twixt-board
-                        (red-twixt-peg #:row 11 #:column 12)
-                        (black-twixt-peg #:row 1 #:column 22)
-                        (red-twixt-peg #:row 13 #:column 11 up-right-link)
-                        (black-twixt-peg #:row 22 #:column 22))))
+   (twixt-board
+    (red-twixt-peg #:row 11 #:column 12)
+    (black-twixt-peg #:row 8 #:column 15)
+    (red-twixt-peg #:row 13 #:column 11 up-right-link)
+    (black-twixt-peg #:row 7 #:column 13 right-down-link))))
