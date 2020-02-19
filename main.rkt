@@ -3,10 +3,11 @@
 (require racket/contract/base)
 
 (provide
+ (all-from-out twixt/base)
  (contract-out
-  [twixt-board? predicate/c]
-  [empty-twixt-board twixt-board?]
+  [twixt-board (-> twixt-peg? ... twixt-board?)]
   [twixt-board-pict (->* (twixt-board?) (#:stylesheet twixt-stylesheet?) pict?)]
+  [sample-twixt-board (-> twixt-board?)]
   [twixt-stylesheet? predicate/c]
   [standard-twixt-stylesheet twixt-stylesheet?]
   [monochrome-twixt-stylesheet twixt-stylesheet?]))
@@ -17,7 +18,9 @@
          racket/list
          racket/match
          racket/math
+         racket/random
          racket/sequence
+         racket/set
          rebellion/base/option
          rebellion/collection/entry
          rebellion/collection/immutable-vector
@@ -177,27 +180,29 @@
 
 (define standard-twixt-stylesheet
   (twixt-stylesheet
-   #:cell-size 24
+   #:cell-size 20
    #:cell-color "Bisque"
-   #:hole-diameter 4
+   #:hole-diameter 3
    #:hole-color "Burlywood"
-   #:border-thickness 4
-   #:peg-diameter 16
-   #:line-thickness 4
+   #:border-thickness 3
+   #:peg-diameter 12
+   #:line-thickness 3
    #:vertical-player red
    #:vertical-player-color "Red"
    #:horizontal-player-color "Black"))
 
 (define monochrome-twixt-stylesheet
   (twixt-stylesheet
-   #:cell-size 24
+   #:cell-size (twixt-stylesheet-cell-size standard-twixt-stylesheet)
    #:cell-color "Light Gray"
-   #:hole-diameter 4
+   #:hole-diameter (twixt-stylesheet-hole-diameter standard-twixt-stylesheet)
    #:hole-color "Dark Gray"
-   #:border-thickness 4
-   #:peg-diameter 16
-   #:line-thickness 4
-   #:vertical-player red
+   #:border-thickness
+   (twixt-stylesheet-border-thickness standard-twixt-stylesheet)
+   #:peg-diameter (twixt-stylesheet-peg-diameter standard-twixt-stylesheet)
+   #:line-thickness (twixt-stylesheet-line-thickness standard-twixt-stylesheet)
+   #:vertical-player
+   (twixt-stylesheet-vertical-player standard-twixt-stylesheet)
    #:vertical-player-color "White"
    #:horizontal-player-color "Black"))
 
@@ -289,10 +294,28 @@
                #:color (twixt-stylesheet-player-color styles owner)
                #:thickness (twixt-stylesheet-line-thickness styles)))
 
+(define (sample-twixt-board)
+  (define red-pos1
+    (twixt-position #:row (+ (random 16) 4) #:column (+ (random 16) 4)))
+  (define black-pos1
+    (twixt-position #:row (+ (random 16) 4) #:column (+ (random 16) 4)))
+  (define red-link (random-ref all-twixt-links))
+  (define black-link (random-ref all-twixt-links))
+  (define red-pos2 (twixt-link-destination red-link red-pos1))
+  (define black-pos2 (twixt-link-destination black-link black-pos1))
+  (cond
+    [(or (equal? red-pos1 black-pos1)
+         (equal? red-pos1 black-pos2)
+         (equal? red-pos2 black-pos1)
+         (equal? red-pos2 black-pos2))
+     (sample-twixt-board)]
+    [else
+     (twixt-board
+      (twixt-peg #:owner red #:position red-pos1 #:links (set red-link))
+      (twixt-peg #:owner red #:position red-pos2)
+      (twixt-peg #:owner black #:position black-pos1 #:links (set black-link))
+      (twixt-peg #:owner black #:position black-pos2))]))
+
 (module+ main
   (twixt-board-pict
-   (twixt-board
-    (red-twixt-peg #:row 11 #:column 12)
-    (black-twixt-peg #:row 8 #:column 15)
-    (red-twixt-peg #:row 13 #:column 11 up-right-link)
-    (black-twixt-peg #:row 7 #:column 13 right-down-link))))
+   (sample-twixt-board)))

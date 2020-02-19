@@ -18,6 +18,9 @@
   [red twixt-player?]
   [black twixt-player?]
   [twixt-link? predicate/c]
+  [twixt-link-inverse (-> twixt-link? twixt-link?)]
+  [twixt-link-destination (-> twixt-link? twixt-position? twixt-position?)]
+  [all-twixt-links (set/c twixt-link?)]
   [up-left-link twixt-link?]
   [up-right-link twixt-link?]
   [right-up-link twixt-link?]
@@ -158,6 +161,16 @@
    down-left-link
    left-down-link
    left-up-link))
+
+(define all-twixt-links
+  (set up-left-link
+       up-right-link
+       right-up-link
+       right-down-link
+       down-right-link
+       down-left-link
+       left-down-link
+       left-up-link))
 
 (define (twixt-link-inverse link)
   (match link
