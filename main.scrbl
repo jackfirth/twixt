@@ -202,7 +202,7 @@ vice-versa.
 
 @defproc[(twixt-peg [#:owner owner twixt-player?]
                     [#:position position twixt-position?]
-                    [#:links links (sequence/c twixt-link?)])
+                    [#:links links (sequence/c twixt-link-direction?)])
          twixt-peg?]{
  Constructs a @tech{TwixT peg} at @racket[position] and owned by @racket[owner].
  Each link in @racket[links] specifies a direction in which the peg is linked to
@@ -214,7 +214,7 @@ vice-versa.
 
 @defproc[(red-twixt-peg [#:row row twixt-index/c]
                         [#:column column twixt-index/c]
-                        [link twixt-link?] ...)
+                        [link twixt-link-direction?] ...)
          twixt-peg?]{
  Constructs a @tech{TwixT peg} at @racket[row] and @racket[column], owned by the
  @racket[red] player. Each @racket[link] specifies a direction in which the peg
@@ -234,7 +234,7 @@ vice-versa.
 
 @defproc[(black-twixt-peg [#:row row twixt-index/c]
                           [#:column column twixt-index/c]
-                          [link twixt-link?] ...)
+                          [link twixt-link-direction?] ...)
          twixt-peg?]{
  Constructs a @tech{TwixT peg} at @racket[row] and @racket[column], owned by the
  @racket[black] player. Each @racket[link] specifies a direction in which the
@@ -255,23 +255,23 @@ vice-versa.
 @defproc[(twixt-peg-position [peg twixt-peg?]) twixt-position?]{
  Returns the position where @racket[peg] is placed on the board.}
 
-@defproc[(twixt-peg-links [peg twixt-peg?]) (set/c twixt-link?)]{
+@defproc[(twixt-peg-links [peg twixt-peg?]) (set/c twixt-link-direction?)]{
  Returns the set of directions in which @racket[peg] is linked to other pegs.}
 
 @subsection{TwixT Peg Links}
 
-@defproc[(twixt-link? [v any/c]) boolean?]{
+@defproc[(twixt-link-direction? [v any/c]) boolean?]{
  A predicate for TwixT peg linking directions.}
 
 @deftogether[[
- @defthing[up-left-link twixt-link?]
- @defthing[up-right-link twixt-link?]
- @defthing[right-up-link twixt-link?]
- @defthing[right-down-link twixt-link?]
- @defthing[down-right-link twixt-link?]
- @defthing[down-left-link twixt-link?]
- @defthing[left-down-link twixt-link?]
- @defthing[left-up-link twixt-link?]]]{
+ @defthing[up-left-link twixt-link-direction?]
+ @defthing[up-right-link twixt-link-direction?]
+ @defthing[right-up-link twixt-link-direction?]
+ @defthing[right-down-link twixt-link-direction?]
+ @defthing[down-right-link twixt-link-direction?]
+ @defthing[down-left-link twixt-link-direction?]
+ @defthing[left-down-link twixt-link-direction?]
+ @defthing[left-up-link twixt-link-direction?]]]{
  Constants for the eight directions in which one @tech{TwixT peg} may link to
  another. Each link travels two spaces in the first direction of it's name, then
  one space in the second direction.}

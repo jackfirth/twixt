@@ -17,18 +17,20 @@
   [twixt-player? predicate/c]
   [red twixt-player?]
   [black twixt-player?]
-  [twixt-link? predicate/c]
-  [twixt-link-inverse (-> twixt-link? twixt-link?)]
-  [twixt-link-destination (-> twixt-link? twixt-position? twixt-position?)]
-  [all-twixt-links (set/c twixt-link?)]
-  [up-left-link twixt-link?]
-  [up-right-link twixt-link?]
-  [right-up-link twixt-link?]
-  [right-down-link twixt-link?]
-  [down-right-link twixt-link?]
-  [down-left-link twixt-link?]
-  [left-down-link twixt-link?]
-  [left-up-link twixt-link?]
+  [twixt-link-direction? predicate/c]
+  [twixt-link-direction-inverse
+   (-> twixt-link-direction? twixt-link-direction?)]
+  [twixt-link-direction-destination
+   (-> twixt-link-direction? twixt-position? twixt-position?)]
+  [all-twixt-links (set/c twixt-link-direction?)]
+  [up-left-link twixt-link-direction?]
+  [up-right-link twixt-link-direction?]
+  [right-up-link twixt-link-direction?]
+  [right-down-link twixt-link-direction?]
+  [down-right-link twixt-link-direction?]
+  [down-left-link twixt-link-direction?]
+  [left-down-link twixt-link-direction?]
+  [left-up-link twixt-link-direction?]
   [placed-twixt-link? predicate/c]
   [placed-twixt-link-owner (-> placed-twixt-link? twixt-player?)]
   [placed-twixt-link-left-end (-> placed-twixt-link? twixt-position?)]
@@ -36,12 +38,14 @@
   [twixt-peg? predicate/c]
   [twixt-peg-owner (-> twixt-peg? twixt-player?)]
   [twixt-peg-position (-> twixt-peg? twixt-position?)]
-  [twixt-peg-links (-> twixt-peg? (set/c twixt-link?))]
+  [twixt-peg-links (-> twixt-peg? (set/c twixt-link-direction?))]
   [twixt-peg-placed-links (-> twixt-peg? (set/c placed-twixt-link?))]
   [red-twixt-peg
-   (-> #:row twixt-index/c #:column twixt-index/c twixt-link? ... twixt-peg?)]
+   (-> #:row twixt-index/c #:column twixt-index/c twixt-link-direction? ...
+       twixt-peg?)]
   [black-twixt-peg
-   (-> #:row twixt-index/c #:column twixt-index/c twixt-link? ... twixt-peg?)]
+   (-> #:row twixt-index/c #:column twixt-index/c twixt-link-direction? ...
+       twixt-peg?)]
   [twixt-board? predicate/c]
   [empty-twixt-board twixt-board?]
   [twixt-board-get-peg (-> twixt-board? twixt-position? (option/c twixt-peg?))]
@@ -153,7 +157,7 @@
 
 (define-enum-type twixt-player (red black))
 
-(define-enum-type twixt-link
+(define-enum-type twixt-link-direction
   (up-left-link
    up-right-link
    right-up-link
@@ -173,7 +177,7 @@
        left-down-link
        left-up-link))
 
-(define (twixt-link-inverse link)
+(define (twixt-link-direction-inverse link)
   (match link
     [(== up-left-link) down-right-link]
     [(== up-right-link) down-left-link]
@@ -184,7 +188,7 @@
     [(== left-down-link) right-up-link]
     [(== left-up-link) right-down-link]))
 
-(define (twixt-link-destination link source-position)
+(define (twixt-link-direction-destination link source-position)
   (match-define (twixt-position #:row r #:column c) source-position)
   (define r*
     (match link
@@ -216,27 +220,27 @@
   (make-rename-transformer #'contracted:placed-twixt-link))
 
 (module+ test
-  (test-case "twixt-link-inverse"
-    (check-equal? (twixt-link-inverse up-left-link) down-right-link)
-    (check-equal? (twixt-link-inverse right-down-link) left-up-link))
+  (test-case "twixt-link-direction-inverse"
+    (check-equal? (twixt-link-direction-inverse up-left-link) down-right-link)
+    (check-equal? (twixt-link-direction-inverse right-down-link) left-up-link))
   
-  (test-case "twixt-link-destination"
+  (test-case "twixt-link-direction-destination"
     (define source (twixt-position #:row 5 #:column 10))
-    (check-equal? (twixt-link-destination up-left-link source)
+    (check-equal? (twixt-link-direction-destination up-left-link source)
                   (twixt-position #:row 3 #:column 9))
-    (check-equal? (twixt-link-destination up-right-link source)
+    (check-equal? (twixt-link-direction-destination up-right-link source)
                   (twixt-position #:row 3 #:column 11))
-    (check-equal? (twixt-link-destination right-up-link source)
+    (check-equal? (twixt-link-direction-destination right-up-link source)
                   (twixt-position #:row 4 #:column 12))
-    (check-equal? (twixt-link-destination right-down-link source)
+    (check-equal? (twixt-link-direction-destination right-down-link source)
                   (twixt-position #:row 6 #:column 12))
-    (check-equal? (twixt-link-destination down-right-link source)
+    (check-equal? (twixt-link-direction-destination down-right-link source)
                   (twixt-position #:row 7 #:column 11))
-    (check-equal? (twixt-link-destination down-left-link source)
+    (check-equal? (twixt-link-direction-destination down-left-link source)
                   (twixt-position #:row 7 #:column 9))
-    (check-equal? (twixt-link-destination left-down-link source)
+    (check-equal? (twixt-link-direction-destination left-down-link source)
                   (twixt-position #:row 6 #:column 8))
-    (check-equal? (twixt-link-destination left-up-link source)
+    (check-equal? (twixt-link-direction-destination left-up-link source)
                   (twixt-position #:row 4 #:column 8))))
 
 ;@------------------------------------------------------------------------------
@@ -254,7 +258,7 @@
 (define-module-boundary-contract contracted:twixt-peg
   smart-constructor:twixt-peg
   (->* (#:owner twixt-player? #:position twixt-position?)
-       (#:links (sequence/c twixt-link?))
+       (#:links (sequence/c twixt-link-direction?))
        twixt-peg?)
   #:name-for-blame twixt-peg)
 
@@ -273,7 +277,7 @@
 (define (twixt-peg-placed-links peg)
   (match-define (twixt-peg #:owner owner #:position source #:links links) peg)
   (define (place link)
-    (define destination (twixt-link-destination link source))
+    (define destination (twixt-link-direction-destination link source))
     (define pointed-downwards?
       (< (twixt-position-column source) (twixt-position-column destination)))
     (placed-twixt-link #:owner owner
@@ -352,9 +356,9 @@
     (vector-set! new-links index (set-union previous-links links))
     (for ([link (in-set links)])
       (define linked-index
-        (twixt-position->cell-index (twixt-link-destination link position)))
+        (twixt-position->cell-index (twixt-link-direction-destination link position)))
       (define new-destination-links
-        (set-add (vector-ref new-links linked-index) (twixt-link-inverse link)))
+        (set-add (vector-ref new-links linked-index) (twixt-link-direction-inverse link)))
       (vector-set! new-links linked-index new-destination-links)))
   (twixt-board #:cell-owners (vector->immutable-vector new-owners)
                #:cell-links (vector->immutable-vector new-links)))

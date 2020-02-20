@@ -300,8 +300,8 @@
     (twixt-position #:row (+ (random 16) 4) #:column (+ (random 16) 4)))
   (define red-link (random-ref all-twixt-links))
   (define black-link (random-ref all-twixt-links))
-  (define red-pos2 (twixt-link-destination red-link red-pos1))
-  (define black-pos2 (twixt-link-destination black-link black-pos1))
+  (define red-pos2 (twixt-link-direction-destination red-link red-pos1))
+  (define black-pos2 (twixt-link-direction-destination black-link black-pos1))
   (cond
     [(or (equal? red-pos1 black-pos1)
          (equal? red-pos1 black-pos2)
