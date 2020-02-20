@@ -135,6 +135,17 @@ opposite sides of the board.
    (twixt-board-occupied-positions board)
    (twixt-board-pict board))}
 
+@defproc[(twixt-board-links [board twixt-board?]) (set/c twixt-link?)]{
+ Returns a @racket-reference-tech{set} of all @tech{TwixT links} between pegs on
+ @racket[board].
+
+ @(examples
+   #:eval (make-evaluator) #:once
+   (eval:no-prompt
+    (define board (sample-twixt-board)))
+   (twixt-board-links board)
+   (twixt-board-pict board))}
+
 @subsection{TwixT Board Positions}
 
 A @deftech{TwixT position} is a space on a @tech{TwixT board}. Each board has 24
