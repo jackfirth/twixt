@@ -3,6 +3,7 @@
 @(require (for-label pict
                      racket/base
                      racket/contract/base
+                     racket/math
                      racket/sequence
                      racket/set
                      twixt)
