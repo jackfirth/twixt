@@ -4,7 +4,7 @@
 
 (provide twixt-peg
          twixt-position
-         placed-twixt-link)
+         twixt-link)
 
 (provide
  (contract-out
@@ -31,15 +31,15 @@
   [down-left-link twixt-link-direction?]
   [left-down-link twixt-link-direction?]
   [left-up-link twixt-link-direction?]
-  [placed-twixt-link? predicate/c]
-  [placed-twixt-link-owner (-> placed-twixt-link? twixt-player?)]
-  [placed-twixt-link-left-end (-> placed-twixt-link? twixt-position?)]
-  [placed-twixt-link-right-end (-> placed-twixt-link? twixt-position?)]
+  [twixt-link? predicate/c]
+  [twixt-link-owner (-> twixt-link? twixt-player?)]
+  [twixt-link-left-end (-> twixt-link? twixt-position?)]
+  [twixt-link-right-end (-> twixt-link? twixt-position?)]
   [twixt-peg? predicate/c]
   [twixt-peg-owner (-> twixt-peg? twixt-player?)]
   [twixt-peg-position (-> twixt-peg? twixt-position?)]
   [twixt-peg-links (-> twixt-peg? (set/c twixt-link-direction?))]
-  [twixt-peg-placed-links (-> twixt-peg? (set/c placed-twixt-link?))]
+  [twixt-peg-placed-links (-> twixt-peg? (set/c twixt-link?))]
   [red-twixt-peg
    (-> #:row twixt-index/c #:column twixt-index/c twixt-link-direction? ...
        twixt-peg?)]
@@ -70,14 +70,14 @@
            (set-union (twixt-board-occupied-positions board) peg-positions))
          (for*/and ([peg pegs]
                     [link (in-set (twixt-peg-placed-links peg))])
-           (and (set-member? occupied (placed-twixt-link-left-end link))
-                (set-member? occupied (placed-twixt-link-right-end link)))))
+           (and (set-member? occupied (twixt-link-left-end link))
+                (set-member? occupied (twixt-link-right-end link)))))
 
         [_ twixt-board?])]
 
   [twixt-board-occupied-positions (-> twixt-board? (set/c twixt-position?))]
   [twixt-board-pegs (-> twixt-board? (set/c twixt-peg?))]
-  [twixt-board-links (-> twixt-board? (set/c placed-twixt-link?))]))
+  [twixt-board-links (-> twixt-board? (set/c twixt-link?))]))
 
 (require (for-syntax racket/base
                      syntax/parse)
@@ -204,20 +204,20 @@
       [(or (== right-up-link) (== right-down-link)) (+ c 2)]))
   (twixt-position #:row r* #:column c*))
 
-(define-record-type placed-twixt-link (owner left-end right-end)
+(define-record-type twixt-link (owner left-end right-end)
   #:omit-root-binding)
 
-(define-module-boundary-contract contracted:placed-twixt-link
-  constructor:placed-twixt-link
+(define-module-boundary-contract contracted:twixt-link
+  constructor:twixt-link
   (-> #:owner twixt-player?
       #:left-end twixt-position?
       #:right-end twixt-position?
-      placed-twixt-link?)
-  #:name-for-blame placed-twixt-link)
+      twixt-link?)
+  #:name-for-blame twixt-link)
 
-(define-match-expander placed-twixt-link
-  (syntax-parser [(_ arg ...) #'(pattern:placed-twixt-link arg ...)])
-  (make-rename-transformer #'contracted:placed-twixt-link))
+(define-match-expander twixt-link
+  (syntax-parser [(_ arg ...) #'(pattern:twixt-link arg ...)])
+  (make-rename-transformer #'contracted:twixt-link))
 
 (module+ test
   (test-case "twixt-link-direction-inverse"
@@ -280,9 +280,9 @@
     (define destination (twixt-link-direction-destination link source))
     (define pointed-downwards?
       (< (twixt-position-column source) (twixt-position-column destination)))
-    (placed-twixt-link #:owner owner
-                       #:left-end (if pointed-downwards? source destination)
-                       #:right-end (if pointed-downwards? destination source)))
+    (twixt-link #:owner owner
+                #:left-end (if pointed-downwards? source destination)
+                #:right-end (if pointed-downwards? destination source)))
   (transduce links (mapping place) #:into into-set))
 
 (module+ test
@@ -295,15 +295,15 @@
                      right-up-link
                      right-down-link))
      (set
-      (placed-twixt-link
+      (twixt-link
        #:left-end (twixt-position #:column 10 #:row 10)
        #:owner red
        #:right-end (twixt-position #:column 12 #:row 11))
-      (placed-twixt-link
+      (twixt-link
        #:left-end (twixt-position #:column 9 #:row 8)
        #:owner red
        #:right-end (twixt-position #:column 10 #:row 10))
-      (placed-twixt-link
+      (twixt-link
        #:left-end (twixt-position #:column 10 #:row 10)
        #:owner red
        #:right-end (twixt-position #:column 12 #:row 9))))))

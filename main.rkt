@@ -282,11 +282,7 @@
                #:pinned-position center))
 
 (define (twixt-link-pict link #:stylesheet [styles standard-twixt-stylesheet])
-  (match-define
-    (placed-twixt-link
-     #:owner owner
-     #:left-end start
-     #:right-end end)
+  (match-define (twixt-link #:owner owner #:left-end start #:right-end end)
     link)
   (pinned-line #:source (twixt-board-relative-position start)
                #:destination (twixt-board-relative-position end)
