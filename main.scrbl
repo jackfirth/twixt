@@ -6,6 +6,7 @@
                      racket/math
                      racket/sequence
                      racket/set
+                     rebellion/base/option
                      twixt)
           scribble/decode
           scribble/example)
@@ -77,6 +78,18 @@ opposite sides of the board.
      (red-twixt-peg #:row 11 #:column 10 up-right-link)
      (black-twixt-peg #:row 15 #:column 12)
      (black-twixt-peg #:row 13 #:column 11 down-right-link))))}
+
+@defproc[(twixt-board-get-peg [board twixt-board?] [position twixt-position?])
+         (option/c twixt-peg?)]{
+ Returns the @tech{TwixT peg} at @racket[position] of @racket[board], if there
+ is one.
+
+ @(examples
+   #:eval (make-evaluator) #:once
+   (eval:no-prompt
+    (define board (twixt-board (red-twixt-peg #:row 9 #:column 11))))
+   (twixt-board-get-peg board (twixt-position #:row 9 #:column 11))
+   (twixt-board-get-peg board (twixt-position #:row 4 #:column 18)))}
 
 @subsection{TwixT Board Positions}
 
