@@ -39,7 +39,7 @@
   [twixt-peg-owner (-> twixt-peg? twixt-player?)]
   [twixt-peg-position (-> twixt-peg? twixt-position?)]
   [twixt-peg-link-directions (-> twixt-peg? (set/c twixt-link-direction?))]
-  [twixt-peg-placed-links (-> twixt-peg? (set/c twixt-link?))]
+  [twixt-peg-links (-> twixt-peg? (set/c twixt-link?))]
   [red-twixt-peg
    (-> #:row twixt-index/c #:column twixt-index/c twixt-link-direction? ...
        twixt-peg?)]
@@ -69,7 +69,7 @@
          (define occupied
            (set-union (twixt-board-occupied-positions board) peg-positions))
          (for*/and ([peg pegs]
-                    [link (in-set (twixt-peg-placed-links peg))])
+                    [link (in-set (twixt-peg-links peg))])
            (and (set-member? occupied (twixt-link-left-end link))
                 (set-member? occupied (twixt-link-right-end link)))))
 
@@ -270,7 +270,7 @@
   (define position (twixt-position #:row row #:column column))
   (twixt-peg #:owner black #:position position #:link-directions links))
 
-(define (twixt-peg-placed-links peg)
+(define (twixt-peg-links peg)
   (match-define
     (twixt-peg #:owner owner #:position source #:link-directions links)
     peg)
@@ -284,9 +284,9 @@
   (transduce links (mapping place) #:into into-set))
 
 (module+ test
-  (test-case "twixt-peg-placed-links"
+  (test-case "twixt-peg-links"
     (check-equal?
-     (twixt-peg-placed-links
+     (twixt-peg-links
       (red-twixt-peg #:row 10
                      #:column 10
                      up-left-link
@@ -372,7 +372,7 @@
 
 (define (twixt-board-links board)
   (transduce (twixt-board-pegs board)
-             (append-mapping twixt-peg-placed-links)
+             (append-mapping twixt-peg-links)
              #:into into-set))
 
 (module+ test

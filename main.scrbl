@@ -192,10 +192,8 @@ player.
 @section{TwixT Pegs}
 
 A @deftech{TwixT peg} is a piece owned by one of the two TwixT players and
-placed somewhere on a @tech{TwixT board}. Each peg may have links attaching it
-to the player's other pegs. Linked pegs must always be a knight's move apart,
-meaning two spaces apart horizontally and one space apart vertically or
-vice-versa.
+placed somewhere on a @tech{TwixT board}. Each peg may have @tech{TwixT links}
+attaching it to the player's other pegs.
 
 @defproc[(twixt-peg? [v any/c]) boolean?]{
  A predicate for @tech{TwixT pegs}.}
@@ -256,14 +254,41 @@ vice-versa.
 @defproc[(twixt-peg-position [peg twixt-peg?]) twixt-position?]{
  Returns the position where @racket[peg] is placed on the board.}
 
+@defproc[(twixt-peg-links [peg twixt-peg?]) (set/c twixt-link?)]{
+ Returns the set of @tech{TwixT links} attached to this peg.}
+
 @defproc[(twixt-peg-link-directions [peg twixt-peg?])
          (set/c twixt-link-direction?)]{
  Returns the set of directions in which @racket[peg] is linked to other pegs.}
 
 @subsection{TwixT Peg Links}
 
+A @deftech{TwixT link} is a link between two @tech{TwixT pegs} owned by the same
+player. Linked pegs must always be a knight's move apart, meaning two spaces
+apart horizontally and one space apart vertically or vice-versa.
+
+@defproc[(twixt-link? [v any/c]) boolean?]{
+ A predicate for @tech{TwixT links}.}
+
+@defproc[(twixt-link [#:owner owner twixt-player?]
+                     [#:left-end left-end twixt-position?]
+                     [#:right-end right-end twixt-position?])
+         twixt-link?]{
+ Constructs a @tech{TwixT link} between @racket[left-end] and @racket[right-end]
+ and owned by @racket[owner]. The column of @racket[left-end] must be less than
+ that of @racket[right-end]. @can-be-match-expander}
+
+@defproc[(twixt-link-owner [link twixt-link?]) twixt-player?]{
+ Returns the TwixT player that owns @racket[link].}
+
+@defproc[(twixt-link-left-end [link twixt-link?]) twixt-position?]{
+ Returns the position of the left end of @racket[link].}
+
+@defproc[(twixt-link-right-end [link twixt-link?]) twixt-position?]{
+ Returns the position of the right end of @racket[link].}
+
 @defproc[(twixt-link-direction? [v any/c]) boolean?]{
- A predicate for TwixT peg linking directions.}
+ A predicate for the directions in which a peg may link to another peg.}
 
 @deftogether[[
  @defthing[up-left-link twixt-link-direction?]
