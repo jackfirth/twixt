@@ -91,6 +91,27 @@ opposite sides of the board.
    (twixt-board-get-peg board (twixt-position #:row 9 #:column 11))
    (twixt-board-get-peg board (twixt-position #:row 4 #:column 18)))}
 
+@defproc[(twixt-board-put-all-pegs [board twixt-board?]
+                                   [pegs (sequence/c twixt-peg?)])
+         twixt-board?]{
+ Puts each @tech{TwixT peg} in @racket[pegs] onto @racket[board] at the peg's
+ position. Two pegs on a board cannot occupy the same position, and links must
+ be connected to pegs on both ends. If either of these conditions is violated,
+ a contract failure is raised. Links between pegs cannot overlap, but
+ enforcement of this property is not yet implemented.
+
+ @(examples
+   #:eval (make-evaluator) #:once
+   (eval:no-prompt
+    (define board (twixt-board (red-twixt-peg #:row 9 #:column 11))))
+   (twixt-board-pict
+    (twixt-board-put-all-pegs
+     board
+     (list (red-twixt-peg #:row 7 #:column 12 down-left-link)
+           (red-twixt-peg #:row 10 #:column 13 left-up-link)
+           (red-twixt-peg #:row 10 #:column 9 right-up-link)
+           (red-twixt-peg #:row 12 #:column 14 up-left-link)))))}
+
 @subsection{TwixT Board Positions}
 
 A @deftech{TwixT position} is a space on a @tech{TwixT board}. Each board has 24
