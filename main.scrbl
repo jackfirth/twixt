@@ -112,6 +112,29 @@ opposite sides of the board.
            (red-twixt-peg #:row 10 #:column 9 right-up-link)
            (red-twixt-peg #:row 12 #:column 14 up-left-link)))))}
 
+@defproc[(twixt-board-pegs [board twixt-board?]) (set/c twixt-peg?)]{
+ Returns a @racket-reference-tech{set} of all @tech{TwixT pegs} placed on
+ @racket[board].
+
+ @(examples
+   #:eval (make-evaluator) #:once
+   (eval:no-prompt
+    (define board (sample-twixt-board)))
+   (twixt-board-pegs board)
+   (twixt-board-pict board))}
+
+@defproc[(twixt-board-occupied-positions [board twixt-board?])
+         (set/c twixt-position?)]{
+ Returns a @racket-reference-tech{set} of all positions on @racket[board] that
+ are occupied by @tech{TwixT pegs}.
+
+ @(examples
+   #:eval (make-evaluator) #:once
+   (eval:no-prompt
+    (define board (sample-twixt-board)))
+   (twixt-board-occupied-positions board)
+   (twixt-board-pict board))}
+
 @subsection{TwixT Board Positions}
 
 A @deftech{TwixT position} is a space on a @tech{TwixT board}. Each board has 24
