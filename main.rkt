@@ -40,8 +40,7 @@
 ;@------------------------------------------------------------------------------
 ;; Data model stuff that shouldn't be allowed bypass twixt/base contracts
 
-(define (twixt-board . pegs)
-  (apply twixt-board-put-peg empty-twixt-board pegs))
+(define (twixt-board . pegs) (twixt-board-put-all-pegs empty-twixt-board pegs))
 
 ;@------------------------------------------------------------------------------
 ;; Pict stuff

@@ -48,15 +48,15 @@
   [twixt-board-occupied-at? (-> twixt-board? twixt-position? boolean?)]
   [twixt-board-unoccupied-at? (-> twixt-board? twixt-position? boolean?)]
 
-  [twixt-board-put-peg
-   (->i ([board twixt-board?]) #:rest [pegs (listof twixt-peg?)]
+  [twixt-board-put-all-pegs
+   (->i ([board twixt-board?] [pegs (sequence/c twixt-peg?)])
 
         #:pre/name (board pegs) "board must be unoccupied"
-        (for/and ([peg (in-list pegs)])
+        (for/and ([peg pegs])
           (twixt-board-unoccupied-at? board (twixt-peg-position peg)))
 
         #:pre/name (pegs) "peg positions must be unique"
-        (list-elements-unique? (map twixt-peg-position pegs))
+        (peg-positions-unique? pegs)
 
         #:pre/name (board pegs) "links must have pegs at both ends"
         (block
@@ -64,7 +64,7 @@
            (transduce pegs (mapping twixt-peg-position) #:into into-set))
          (define occupied
            (set-union (twixt-board-occupied-positions board) peg-positions))
-         (for*/and ([peg (in-list pegs)]
+         (for*/and ([peg pegs]
                     [link (in-set (twixt-peg-placed-links peg))])
            (and (set-member? occupied (placed-twixt-link-left-end link))
                 (set-member? occupied (placed-twixt-link-right-end link)))))
@@ -89,6 +89,7 @@
          rebellion/collection/hash
          rebellion/collection/immutable-vector
          rebellion/collection/list
+         rebellion/collection/multiset
          rebellion/collection/set
          rebellion/streaming/reducer
          rebellion/streaming/transducer
@@ -339,10 +340,10 @@
 (define (twixt-board-unoccupied-at? board position)
   (absent? (twixt-board-get-peg board position)))
 
-(define (twixt-board-put-peg board . pegs)
+(define (twixt-board-put-all-pegs board pegs)
   (define new-owners (vector-copy-of (twixt-board-cell-owners board)))
   (define new-links (vector-copy-of (twixt-board-cell-links board)))
-  (for ([peg (in-list pegs)])
+  (for ([peg pegs])
     (match-define (twixt-peg #:owner owner #:position position #:links links)
       peg)
     (define index (twixt-position->cell-index position))
@@ -385,14 +386,15 @@
 
     (test-case "occupied"
       (define peg (twixt-peg #:owner black #:position position))
-      (define board (twixt-board-put-peg empty-twixt-board peg))
+      (define board (twixt-board-put-all-pegs empty-twixt-board (list peg)))
       (check-equal? (twixt-board-get-peg board position) (present peg)))
 
     (test-case "links"
       (define first-peg (red-twixt-peg #:row 10 #:column 10))
       (define second-peg (red-twixt-peg #:row 12 #:column 11 up-left-link))
       (define board
-        (twixt-board-put-peg empty-twixt-board first-peg second-peg))
+        (twixt-board-put-all-pegs empty-twixt-board
+                                  (list first-peg second-peg)))
       (check-equal?
        (twixt-board-get-peg board (twixt-position #:row 10 #:column 10))
        (present (red-twixt-peg #:row 10 #:column 10 down-right-link)))
@@ -404,10 +406,10 @@
 
     (test-case "should fail when occupied"
       (define peg (red-twixt-peg #:row 12 #:column 9))
-      (define board (twixt-board-put-peg empty-twixt-board peg))
-      (define (put-again) (twixt-board-put-peg board peg))
+      (define board (twixt-board-put-all-pegs empty-twixt-board (list peg)))
+      (define (put-again) (twixt-board-put-all-pegs board (list peg)))
       (check-exn exn:fail:contract:blame? put-again)
-      (check-exn #rx"twixt-board-put-peg" put-again)
+      (check-exn #rx"twixt-board-put-all-pegs" put-again)
       (check-exn #rx"board must be unoccupied" put-again)
       (check-exn #rx"12" put-again)
       (check-exn #rx"9" put-again)
@@ -415,11 +417,11 @@
 
     (test-case "should fail when given multiple pegs for same position"
       (define (put-both)
-        (twixt-board-put-peg empty-twixt-board
-                             (red-twixt-peg #:row 7 #:column 21)
-                             (black-twixt-peg #:row 7 #:column 21)))
+        (twixt-board-put-all-pegs empty-twixt-board
+                                  (list (red-twixt-peg #:row 7 #:column 21)
+                                        (black-twixt-peg #:row 7 #:column 21))))
       (check-exn exn:fail:contract:blame? put-both)
-      (check-exn #rx"twixt-board-put-peg" put-both)
+      (check-exn #rx"twixt-board-put-all-pegs" put-both)
       (check-exn #rx"peg positions must be unique" put-both)
       (check-exn #rx"7" put-both)
       (check-exn #rx"21" put-both)
@@ -428,16 +430,16 @@
 
     (test-case "should fail when given links without pegs"
       (define (put-mislinked)
-        (twixt-board-put-peg empty-twixt-board
-                             (red-twixt-peg #:row 10 #:column 10 up-left-link)))
+        (define pegs (list (red-twixt-peg #:row 10 #:column 10 up-left-link)))
+        (twixt-board-put-all-pegs empty-twixt-board pegs))
       (check-exn exn:fail:contract:blame? put-mislinked)
-      (check-exn #rx"twixt-board-put-peg" put-mislinked)
+      (check-exn #rx"twixt-board-put-all-pegs" put-mislinked)
       (check-exn #rx"links must have pegs at both ends" put-mislinked)
       (check-exn #rx"up-left-link" put-mislinked))
 
     (test-case "should allow links between simultaneously-added pegs"
       (define ((make-put-call . pegs))
-        (apply twixt-board-put-peg empty-twixt-board pegs))
+        (twixt-board-put-all-pegs empty-twixt-board pegs))
       (check-not-exn
        (make-put-call
         (red-twixt-peg #:row 10 #:column 10 up-left-link)
@@ -453,12 +455,12 @@
 
   (test-case "twixt board peg and link collections"
     (define board
-      (twixt-board-put-peg
+      (twixt-board-put-all-pegs
        empty-twixt-board
-       (red-twixt-peg #:row 5 #:column 5)
-       (black-twixt-peg #:row 10 #:column 10)
-       (red-twixt-peg #:row 6 #:column 7 left-up-link)
-       (black-twixt-peg #:row 12 #:column 9 up-right-link)))
+       (list (red-twixt-peg #:row 5 #:column 5)
+             (black-twixt-peg #:row 10 #:column 10)
+             (red-twixt-peg #:row 6 #:column 7 left-up-link)
+             (black-twixt-peg #:row 12 #:column 9 up-right-link))))
     (define pegs (twixt-board-pegs board))
     (define links (twixt-board-links board))
     (check-equal? (set-count pegs) 4)
@@ -471,8 +473,10 @@
 ;@------------------------------------------------------------------------------
 ;; Utils
 
-(define (list-elements-unique? lst)
-  (equal? (set-count (list->set lst)) (list-size lst)))
+(define (peg-positions-unique? pegs)
+  (define positions (for/multiset ([peg pegs]) (twixt-peg-position peg)))
+  (equal? (multiset-size positions)
+          (set-count (multiset-unique-elements positions))))
 
 (define (vector-copy-of vec)
   (define copy (make-vector (vector-length vec)))
