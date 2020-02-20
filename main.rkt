@@ -13,19 +13,11 @@
   [monochrome-twixt-stylesheet twixt-stylesheet?]))
 
 (require pict
-         racket/bool
-         racket/function
          racket/list
          racket/match
-         racket/math
          racket/random
          racket/sequence
          racket/set
-         rebellion/base/option
-         rebellion/collection/entry
-         rebellion/collection/immutable-vector
-         rebellion/collection/hash
-         rebellion/collection/set
          rebellion/streaming/reducer
          rebellion/streaming/transducer
          rebellion/type/enum
@@ -34,8 +26,7 @@
          twixt/base)
 
 (module+ test
-  (require (submod "..")
-           rackunit))
+  (require (submod "..")))
 
 ;@------------------------------------------------------------------------------
 ;; Data model stuff that shouldn't be allowed bypass twixt/base contracts
@@ -306,9 +297,13 @@
      (sample-twixt-board)]
     [else
      (twixt-board
-      (twixt-peg #:owner red #:position red-pos1 #:links (set red-link))
+      (twixt-peg #:owner red
+                 #:position red-pos1
+                 #:link-directions (set red-link))
       (twixt-peg #:owner red #:position red-pos2)
-      (twixt-peg #:owner black #:position black-pos1 #:links (set black-link))
+      (twixt-peg #:owner black
+                 #:position black-pos1
+                 #:link-directions (set black-link))
       (twixt-peg #:owner black #:position black-pos2))]))
 
 (module+ main

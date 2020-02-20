@@ -200,9 +200,10 @@ vice-versa.
 @defproc[(twixt-peg? [v any/c]) boolean?]{
  A predicate for @tech{TwixT pegs}.}
 
-@defproc[(twixt-peg [#:owner owner twixt-player?]
-                    [#:position position twixt-position?]
-                    [#:links links (sequence/c twixt-link-direction?)])
+@defproc[(twixt-peg
+          [#:owner owner twixt-player?]
+          [#:position position twixt-position?]
+          [#:link-directions links (sequence/c twixt-link-direction?)])
          twixt-peg?]{
  Constructs a @tech{TwixT peg} at @racket[position] and owned by @racket[owner].
  Each link in @racket[links] specifies a direction in which the peg is linked to
@@ -255,7 +256,8 @@ vice-versa.
 @defproc[(twixt-peg-position [peg twixt-peg?]) twixt-position?]{
  Returns the position where @racket[peg] is placed on the board.}
 
-@defproc[(twixt-peg-links [peg twixt-peg?]) (set/c twixt-link-direction?)]{
+@defproc[(twixt-peg-link-directions [peg twixt-peg?])
+         (set/c twixt-link-direction?)]{
  Returns the set of directions in which @racket[peg] is linked to other pegs.}
 
 @subsection{TwixT Peg Links}

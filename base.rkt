@@ -38,7 +38,7 @@
   [twixt-peg? predicate/c]
   [twixt-peg-owner (-> twixt-peg? twixt-player?)]
   [twixt-peg-position (-> twixt-peg? twixt-position?)]
-  [twixt-peg-links (-> twixt-peg? (set/c twixt-link-direction?))]
+  [twixt-peg-link-directions (-> twixt-peg? (set/c twixt-link-direction?))]
   [twixt-peg-placed-links (-> twixt-peg? (set/c twixt-link?))]
   [red-twixt-peg
    (-> #:row twixt-index/c #:column twixt-index/c twixt-link-direction? ...
@@ -83,19 +83,14 @@
                      syntax/parse)
          racket/block
          racket/bool
-         racket/function
          racket/match
          racket/math
          racket/sequence
          racket/set
          rebellion/base/option
-         rebellion/collection/entry
-         rebellion/collection/hash
          rebellion/collection/immutable-vector
-         rebellion/collection/list
          rebellion/collection/multiset
          rebellion/collection/set
-         rebellion/streaming/reducer
          rebellion/streaming/transducer
          rebellion/type/enum
          rebellion/type/record)
@@ -246,19 +241,20 @@
 ;@------------------------------------------------------------------------------
 ;; Twixt pegs
 
-(define-record-type twixt-peg (owner position links) #:omit-root-binding)
+(define-record-type twixt-peg (owner position link-directions)
+  #:omit-root-binding)
 
 (define (smart-constructor:twixt-peg #:owner owner
                                      #:position position
-                                     #:links [links empty-set])
+                                     #:link-directions [links empty-set])
   (constructor:twixt-peg #:owner owner
                          #:position position
-                         #:links (transduce links #:into into-set)))
+                         #:link-directions (transduce links #:into into-set)))
 
 (define-module-boundary-contract contracted:twixt-peg
   smart-constructor:twixt-peg
   (->* (#:owner twixt-player? #:position twixt-position?)
-       (#:links (sequence/c twixt-link-direction?))
+       (#:link-directions (sequence/c twixt-link-direction?))
        twixt-peg?)
   #:name-for-blame twixt-peg)
 
@@ -268,14 +264,16 @@
 
 (define (red-twixt-peg #:row row #:column column . links)
   (define position (twixt-position #:row row #:column column))
-  (twixt-peg #:owner red #:position position #:links links))
+  (twixt-peg #:owner red #:position position #:link-directions links))
 
 (define (black-twixt-peg #:row row #:column column . links)
   (define position (twixt-position #:row row #:column column))
-  (twixt-peg #:owner black #:position position #:links links))
+  (twixt-peg #:owner black #:position position #:link-directions links))
 
 (define (twixt-peg-placed-links peg)
-  (match-define (twixt-peg #:owner owner #:position source #:links links) peg)
+  (match-define
+    (twixt-peg #:owner owner #:position source #:link-directions links)
+    peg)
   (define (place link)
     (define destination (twixt-link-direction-destination link source))
     (define pointed-downwards?
@@ -327,7 +325,8 @@
   (cond
     [(not owner) absent]
     [else
-     (define peg (twixt-peg #:owner owner #:position position #:links links))
+     (define peg
+       (twixt-peg #:owner owner #:position position #:link-directions links))
      (present peg)]))
 
 (define (twixt-board-occupied-positions board)
@@ -348,7 +347,8 @@
   (define new-owners (vector-copy-of (twixt-board-cell-owners board)))
   (define new-links (vector-copy-of (twixt-board-cell-links board)))
   (for ([peg pegs])
-    (match-define (twixt-peg #:owner owner #:position position #:links links)
+    (match-define
+      (twixt-peg #:owner owner #:position position #:link-directions links)
       peg)
     (define index (twixt-position->cell-index position))
     (vector-set! new-owners index owner)
@@ -356,9 +356,11 @@
     (vector-set! new-links index (set-union previous-links links))
     (for ([link (in-set links)])
       (define linked-index
-        (twixt-position->cell-index (twixt-link-direction-destination link position)))
+        (twixt-position->cell-index
+         (twixt-link-direction-destination link position)))
       (define new-destination-links
-        (set-add (vector-ref new-links linked-index) (twixt-link-direction-inverse link)))
+        (set-add (vector-ref new-links linked-index)
+                 (twixt-link-direction-inverse link)))
       (vector-set! new-links linked-index new-destination-links)))
   (twixt-board #:cell-owners (vector->immutable-vector new-owners)
                #:cell-links (vector->immutable-vector new-links)))
